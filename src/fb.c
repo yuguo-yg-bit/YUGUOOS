@@ -42,6 +42,9 @@ static inline void fb_write_pixel(uint32_t x, uint32_t y, uint32_t color)
         fb.addr[off]     = (uint8_t)(color & 0xFF);
         fb.addr[off + 1] = (uint8_t)((color >> 8) & 0xFF);
         fb.addr[off + 2] = (uint8_t)((color >> 16) & 0xFF);
+    } else if (fb.bpp_bytes == 2) {
+        fb.addr[off]     = (uint8_t)(color & 0xFF);
+        fb.addr[off + 1] = (uint8_t)((color >> 8) & 0xFF);
     }
 }
 
@@ -58,7 +61,16 @@ void fb_init(uintptr_t multiboot_addr)
             fb.height    = fbt->height;
             fb.bpp       = fbt->bpp;
             fb.type      = fbt->fb_type;
-            fb.bpp_bytes = fbt->bpp / 8;
+
+            uint32_t calc_bpp = fbt->pitch / fbt->width;
+            if (calc_bpp >= 1 && calc_bpp <= 4) {
+                fb.bpp_bytes = (uint8_t)calc_bpp;
+            } else {
+                fb.bpp_bytes = (uint8_t)((fbt->bpp + 7) / 8);
+            }
+            if (fb.bpp_bytes < 1) fb.bpp_bytes = 1;
+            if (fb.bpp_bytes > 4) fb.bpp_bytes = 4;
+
             fb.red_pos   = fbt->red_pos;
             fb.red_mask  = fbt->red_mask;
             fb.green_pos = fbt->green_pos;
@@ -73,10 +85,10 @@ void fb_init(uintptr_t multiboot_addr)
             serial_write_hex(fb.height);
             serial_write("x");
             serial_write_hex(fb.bpp);
+            serial_write(" bpp_bytes=");
+            serial_write_hex(fb.bpp_bytes);
             serial_write(" pitch=");
             serial_write_hex(fb.pitch);
-            serial_write(" type=");
-            serial_write_hex(fb.type);
             serial_write(" addr=0x");
             serial_write_hex((uint32_t)(fbt->addr >> 32));
             serial_write_hex((uint32_t)(fbt->addr & 0xFFFFFFFF));
@@ -96,6 +108,9 @@ bool fb_available(void)
 
 uint32_t fb_get_width(void)  { return fb.width; }
 uint32_t fb_get_height(void) { return fb.height; }
+uint32_t fb_get_bpp_bytes(void) { return fb.bpp_bytes; }
+uint32_t fb_get_pitch(void) { return fb.pitch; }
+uint8_t *fb_get_addr(void) { return fb.addr; }
 
 void fb_clear(uint32_t color)
 {
@@ -120,6 +135,13 @@ void fb_clear(uint32_t color)
                 row[x * 3 + 1] = b1;
                 row[x * 3 + 2] = b2;
             }
+        }
+    } else if (fb.bpp_bytes == 2) {
+        uint16_t *p = (uint16_t *)fb.addr;
+        uint16_t w16 = (uint16_t)(b0 | (b1 << 8));
+        uint32_t count = (fb.pitch / 2) * fb.height;
+        for (uint32_t i = 0; i < count; i++) {
+            p[i] = w16;
         }
     }
 }
@@ -168,6 +190,14 @@ void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color
             uint32_t *row = (uint32_t *)(fb.addr + (y + yy) * fb.pitch);
             for (uint32_t xx = 0; xx < w; xx++) {
                 row[x + xx] = color32;
+            }
+        }
+    } else if (fb.bpp_bytes == 2) {
+        uint16_t color16 = (uint16_t)((color & 0xFF) | ((color >> 8) & 0xFF) << 8);
+        for (uint32_t yy = 0; yy < h; yy++) {
+            uint16_t *row = (uint16_t *)(fb.addr + (y + yy) * fb.pitch);
+            for (uint32_t xx = 0; xx < w; xx++) {
+                row[x + xx] = color16;
             }
         }
     } else {

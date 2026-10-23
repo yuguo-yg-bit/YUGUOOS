@@ -50,6 +50,9 @@ void fb_draw_string(uint32_t x, uint32_t y, const char *str, uint32_t fg, uint32
 void fb_draw_string_centered(uint32_t y, const char *str, uint32_t fg, uint32_t bg);
 uint32_t fb_get_width(void);
 uint32_t fb_get_height(void);
+uint32_t fb_get_bpp_bytes(void);
+uint32_t fb_get_pitch(void);
+uint8_t *fb_get_addr(void);
 
 void fb_draw_big_char(uint32_t x, uint32_t y, char c, uint32_t fg);
 void fb_draw_big_string(uint32_t x, uint32_t y, const char *str, uint32_t fg);
