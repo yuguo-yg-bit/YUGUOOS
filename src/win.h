@@ -5,9 +5,11 @@
 #define WIN_CONTENT_BUF_SIZE 512
 
 typedef struct win win_t;
+typedef struct widget_mgr widget_mgr_t;
 
 typedef void (*win_draw_fn_t)(win_t *win);
 typedef void (*win_input_fn_t)(win_t *win, char c);
+typedef void (*win_cleanup_fn_t)(win_t *win);
 
 struct win {
     uint32_t    id;
@@ -21,9 +23,11 @@ struct win {
     struct win *next;
     struct win *prev;
 
-    win_draw_fn_t  draw_content;
-    win_input_fn_t input_char;
-    void          *user_data;
+    win_draw_fn_t    draw_content;
+    win_input_fn_t   input_char;
+    win_cleanup_fn_t cleanup;
+    widget_mgr_t    *widgets;
+    void            *user_data;
 
     char        content_buf[WIN_CONTENT_BUF_SIZE];
     int         content_pos;

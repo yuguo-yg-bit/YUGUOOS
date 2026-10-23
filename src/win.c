@@ -57,6 +57,8 @@ win_t *win_create(const char *title, int x, int y, int w, int h)
     win->prev    = NULL;
     win->draw_content = NULL;
     win->input_char   = NULL;
+    win->cleanup      = NULL;
+    win->widgets      = NULL;
     win->user_data    = NULL;
     win->content_pos  = 0;
 

@@ -89,10 +89,12 @@ void wm_destroy_window(win_t *win)
 
     wm_remove_from_list(win);
 
-    widget_mgr_t *w_mgr = (widget_mgr_t *)win->user_data;
-    if (w_mgr) {
-        widget_mgr_destroy(w_mgr);
-        win->user_data = NULL;
+    if (win->cleanup) {
+        win->cleanup(win);
+    }
+    if (win->widgets) {
+        widget_mgr_destroy(win->widgets);
+        win->widgets = NULL;
     }
 
     win_destroy(win);
@@ -156,8 +158,8 @@ void wm_handle_input(input_event_t *ev)
 
     widget_mgr_t *w_mgr = NULL;
     bool textbox_active = false;
-    if (focused_win && focused_win->user_data) {
-        w_mgr = (widget_mgr_t *)focused_win->user_data;
+    if (focused_win && focused_win->widgets) {
+        w_mgr = focused_win->widgets;
         textbox_active = widget_mgr_has_textbox_focus(w_mgr);
     }
 
@@ -263,7 +265,7 @@ void wm_handle_mouse(int x, int y, bool left_press, bool left_release)
                 return;
             }
 
-            widget_mgr_t *w_mgr = (widget_mgr_t *)hit_win->user_data;
+            widget_mgr_t *w_mgr = hit_win->widgets;
             if (w_mgr) {
                 int wx = x - hit_win->rect.x - WIDGET_OX;
                 int wy = y - hit_win->rect.y - WIDGET_OY;
