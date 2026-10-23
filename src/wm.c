@@ -10,6 +10,7 @@ static win_t    *window_list_head = NULL;
 static win_t    *window_list_tail = NULL;
 static win_t    *focused_win = NULL;
 static int       window_count = 0;
+static wm_desktop_draw_fn desktop_draw_hook = NULL;
 
 void wm_init(void)
 {
@@ -129,6 +130,10 @@ void wm_composite(void)
     if (!screen_back) return;
 
     canvas_clear(screen_back, COLOR_DESKTOP_BG);
+
+    if (desktop_draw_hook) {
+        desktop_draw_hook(screen_back);
+    }
 
     win_t *win = window_list_head;
     while (win) {
@@ -291,6 +296,11 @@ void wm_redraw_all(void)
     wm_composite();
 }
 
+void wm_set_desktop_draw(wm_desktop_draw_fn fn)
+{
+    desktop_draw_hook = fn;
+}
+
 win_t *wm_get_focused(void)
 {
     return focused_win;
@@ -299,4 +309,18 @@ win_t *wm_get_focused(void)
 int wm_window_count(void)
 {
     return window_count;
+}
+
+bool wm_point_in_window(int x, int y)
+{
+    win_t *win = window_list_head;
+    while (win) {
+        if (win->visible &&
+            x >= win->rect.x && x < win->rect.x + win->rect.w &&
+            y >= win->rect.y && y < win->rect.y + win->rect.h) {
+            return true;
+        }
+        win = win->next;
+    }
+    return false;
 }

@@ -10,6 +10,7 @@
 #include "input.h"
 #include "kb.h"
 #include "mouse.h"
+#include "desktop.h"
 
 /* ═══════════════════════════════════════════════════════════════
    COM++ 内部结构定义
@@ -117,6 +118,8 @@ void compp_init(void)
     }
 
     mouse_init();
+    desktop_init();
+    wm_set_desktop_draw(desktop_draw);
     compp_running = true;
 
     serial_write("[COM++] COM++ 框架就绪 v1.0\n");
@@ -161,6 +164,8 @@ void compp_run(void)
                     drag_win = fw;
                     drag_off_x = ms.x - drag_win->rect.x;
                     drag_off_y = ms.y - drag_win->rect.y;
+                } else if (!wm_point_in_window(ms.x, ms.y)) {
+                    desktop_handle_click(ms.x, ms.y);
                 }
                 need_redraw = true;
             }

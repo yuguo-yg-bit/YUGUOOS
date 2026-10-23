@@ -1,13 +1,26 @@
 #include "gui.h"
 #include "app.h"
 #include "compp.h"
+#include "desktop.h"
 #include "serial.h"
+
+static void open_desktop(void)  { app_desktop_run();  }
+static void open_recycle(void)  { app_recycle_run();  }
+static void open_settings(void) { app_settings_run(); }
+static void open_terminal(void) { app_terminal_run(); }
 
 void gui_start(void)
 {
     serial_write("[GUI] 初始化 COM++ 桌面环境...\n");
 
     compp_init();
+
+    serial_write("[GUI] 注册桌面图标...\n");
+
+    desktop_add_icon(32,  32,  64, 52, "This PC",      open_desktop);
+    desktop_add_icon(32,  96,  64, 52, "Recycle Bin",  open_recycle);
+    desktop_add_icon(32,  160, 64, 52, "Settings",     open_settings);
+    desktop_add_icon(32,  224, 64, 52, "Terminal",     open_terminal);
 
     serial_write("[GUI] 启动内置应用...\n");
 
