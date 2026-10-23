@@ -1,0 +1,10 @@
+build/
+*.o
+*.elf
+*.iso
+*.log
+*.img
+.DS_Store
+__pycache__/
+*.pyc
+serial.log
