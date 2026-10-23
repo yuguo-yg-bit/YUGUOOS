@@ -1,5 +1,6 @@
 #include "gui.h"
 #include "wm.h"
+#include "widget.h"
 #include "input.h"
 #include "kb.h"
 #include "mouse.h"
@@ -101,24 +102,45 @@ static void draw_terminal_content(win_t *win)
     }
 }
 
+static void settings_on_apply(widget_t *w)
+{
+    (void)w;
+    serial_write("[GUI] 设置: 应用按钮点击\n");
+}
+
+static void settings_on_cancel(widget_t *w)
+{
+    (void)w;
+    serial_write("[GUI] 设置: 取消按钮点击\n");
+}
+
+static void settings_on_fx_toggle(widget_t *w)
+{
+    serial_write("[GUI] 设置: 窗口特效=");
+    serial_write(w->checked ? "开" : "关");
+    serial_write("\n");
+}
+
+static void settings_on_vmem_toggle(widget_t *w)
+{
+    serial_write("[GUI] 设置: 虚拟内存=");
+    serial_write(w->checked ? "开" : "关");
+    serial_write("\n");
+}
+
+static void settings_on_name_change(widget_t *w)
+{
+    serial_write("[GUI] 设置: 主机名=");
+    serial_write(widget_get_text(w));
+    serial_write("\n");
+}
+
 static void draw_settings_content(win_t *win)
 {
-    int y = 4;
-    win_content_draw_text(win, 4, y, "YuguoOS 设置面板", COLOR_TEXT);
-    y += 20;
-    win_content_draw_text(win, 4, y, "--------------------------------", COLOR_MID_GREY);
-    y += 18;
-    win_content_draw_text(win, 4, y, " 桌面背景:   蓝色", COLOR_TEXT);
-    y += 18;
-    win_content_draw_text(win, 4, y, " 配色方案:   Windows 3.0 经典", COLOR_TEXT);
-    y += 18;
-    win_content_draw_text(win, 4, y, " 窗口特效:   无", COLOR_TEXT);
-    y += 18;
-    win_content_draw_text(win, 4, y, " 鼠标速度:   中", COLOR_TEXT);
-    y += 18;
-    win_content_draw_text(win, 4, y, " 虚拟内存:   关闭", COLOR_TEXT);
-    y += 18;
-    win_content_draw_text(win, 4, y, "  更多设置开发中...", COLOR_MID_GREY);
+    widget_mgr_t *mgr = (widget_mgr_t *)win->user_data;
+    if (mgr) {
+        widget_mgr_draw_all(mgr, win->canvas);
+    }
 }
 
 static void term_input_callback(win_t *win, char c)
@@ -155,7 +177,28 @@ void gui_start(void)
     if (w1) { w1->draw_content = draw_sysinfo_content; }
     if (w2) { w2->draw_content = draw_filemgr_content; }
     if (w3) { w3->draw_content = draw_terminal_content; w3->input_char = term_input_callback; }
-    if (w4) { w4->draw_content = draw_settings_content; }
+    if (w4) {
+        w4->draw_content = draw_settings_content;
+
+        widget_mgr_t *mgr = widget_mgr_create();
+        widget_create_label(mgr, 10, 6, "YuguoOS 设置面板");
+        widget_create_label(mgr, 10, 24, "--------------------------------");
+        widget_create_label(mgr, 10, 48, "桌面背景:  蓝色");
+        widget_create_label(mgr, 10, 68, "配色方案:  Windows 3.0 经典");
+        widget_create_label(mgr, 10, 88, "鼠标速度:  中");
+        widget_create_checkbox(mgr, 10, 112, "启用窗口特效", false, settings_on_fx_toggle);
+
+        widget_create_groupbox(mgr, 10, 142, 250, 100, "系统");
+        widget_create_checkbox(mgr, 22, 172, "启用虚拟内存", false, settings_on_vmem_toggle);
+        widget_create_label(mgr, 22, 196, "主机名:");
+        widget_t *name_box = widget_create_textbox(mgr, 90, 194, 150, "YuguoOS", settings_on_name_change);
+        (void)name_box;
+
+        widget_create_button(mgr, 10, 258, 80, 24, "应用", settings_on_apply);
+        widget_create_button(mgr, 100, 258, 80, 24, "取消", settings_on_cancel);
+
+        w4->user_data = mgr;
+    }
 
     serial_write("[GUI] 桌面环境就绪，共 ");
     char buf[8];

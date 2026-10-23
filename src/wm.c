@@ -1,4 +1,5 @@
 #include "wm.h"
+#include "widget.h"
 #include "gfx.h"
 #include "fb.h"
 #include "serial.h"
@@ -87,6 +88,13 @@ void wm_destroy_window(win_t *win)
     if (!win) return;
 
     wm_remove_from_list(win);
+
+    widget_mgr_t *w_mgr = (widget_mgr_t *)win->user_data;
+    if (w_mgr) {
+        widget_mgr_destroy(w_mgr);
+        win->user_data = NULL;
+    }
+
     win_destroy(win);
     wm_redraw_all();
 }
@@ -146,74 +154,91 @@ void wm_handle_input(input_event_t *ev)
 
     char c = ev->key;
 
-    switch (c) {
-    case '\t':
-        if (focused_win) {
-            win_t *target = focused_win->next;
-            if (!target) target = window_list_head;
-            if (target) {
-                wm_focus_window(target);
+    widget_mgr_t *w_mgr = NULL;
+    bool textbox_active = false;
+    if (focused_win && focused_win->user_data) {
+        w_mgr = (widget_mgr_t *)focused_win->user_data;
+        textbox_active = widget_mgr_has_textbox_focus(w_mgr);
+    }
+
+    if (!textbox_active) {
+        switch (c) {
+        case '\t':
+            if (focused_win) {
+                win_t *target = focused_win->next;
+                if (!target) target = window_list_head;
+                if (target) {
+                    wm_focus_window(target);
+                    wm_redraw_all();
+                }
+            } else if (window_list_tail) {
+                wm_focus_window(window_list_tail);
                 wm_redraw_all();
             }
-        } else if (window_list_tail) {
-            wm_focus_window(window_list_tail);
-            wm_redraw_all();
-        }
-        break;
+            return;
 
-    case 'q':
-        if (focused_win) {
-            wm_destroy_window(focused_win);
-        }
-        break;
+        case 'q':
+            if (focused_win) {
+                wm_destroy_window(focused_win);
+            }
+            return;
 
-    case 'w':
-        if (focused_win) {
-            focused_win->rect.y -= 20;
-            focused_win->dirty = true;
-            wm_redraw_all();
-        }
-        break;
+        case 'w':
+            if (focused_win) {
+                focused_win->rect.y -= 20;
+                focused_win->dirty = true;
+                wm_redraw_all();
+            }
+            return;
 
-    case 'a':
-        if (focused_win) {
-            focused_win->rect.x -= 20;
-            focused_win->dirty = true;
-            wm_redraw_all();
-        }
-        break;
+        case 'a':
+            if (focused_win) {
+                focused_win->rect.x -= 20;
+                focused_win->dirty = true;
+                wm_redraw_all();
+            }
+            return;
 
-    case 's':
-        if (focused_win) {
-            focused_win->rect.y += 20;
-            focused_win->dirty = true;
-            wm_redraw_all();
-        }
-        break;
+        case 's':
+            if (focused_win) {
+                focused_win->rect.y += 20;
+                focused_win->dirty = true;
+                wm_redraw_all();
+            }
+            return;
 
-    case 'd':
-        if (focused_win) {
-            focused_win->rect.x += 20;
-            focused_win->dirty = true;
-            wm_redraw_all();
-        }
-        break;
+        case 'd':
+            if (focused_win) {
+                focused_win->rect.x += 20;
+                focused_win->dirty = true;
+                wm_redraw_all();
+            }
+            return;
 
-    case 'r':
-        if (focused_win) {
-            wm_raise_window(focused_win);
-            wm_redraw_all();
-        }
-        break;
+        case 'r':
+            if (focused_win) {
+                wm_raise_window(focused_win);
+                wm_redraw_all();
+            }
+            return;
 
-    default:
-        if (focused_win) {
+        default:
+            break;
+        }
+    }
+
+    if (focused_win) {
+        if (w_mgr) {
+            if (widget_mgr_handle_key(w_mgr, c)) {
+                focused_win->dirty = true;
+                wm_redraw_all();
+            }
+        } else {
             win_content_putchar(focused_win, c);
             if (focused_win->dirty) {
                 wm_redraw_all();
             }
         }
-        break;
     }
 }
 
@@ -236,6 +261,13 @@ void wm_handle_mouse(int x, int y, bool left_press, bool left_release)
             if (win_hit_close(hit_win, x, y)) {
                 wm_destroy_window(hit_win);
                 return;
+            }
+
+            widget_mgr_t *w_mgr = (widget_mgr_t *)hit_win->user_data;
+            if (w_mgr) {
+                int wx = x - hit_win->rect.x - WIDGET_OX;
+                int wy = y - hit_win->rect.y - WIDGET_OY;
+                widget_mgr_handle_click(w_mgr, wx, wy);
             }
 
             wm_redraw_all();
